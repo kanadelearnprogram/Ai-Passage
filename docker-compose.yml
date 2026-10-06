@@ -1,0 +1,36 @@
+# aipassage 微服务化 · 基础设施（MySQL / Redis / Nacos）
+# 用法：docker compose up -d
+# 业务服务用 mvnw 启动（见 docs/microservice.md），不在此文件中编排。
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: aipassage-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "114514"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7-alpine
+    container_name: aipassage-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  nacos:
+    image: nacos/nacos-server:v2.4.3
+    container_name: aipassage-nacos
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+
+volumes:
+  mysql-data:
+  redis-data:
