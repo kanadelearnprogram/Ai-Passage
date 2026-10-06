@@ -1,7 +1,7 @@
 package com.kanade.aipassage.controller;
 
 
-import cn.dev33.satoken.annotation.SaCheckRole;
+import com.kanade.aipassage.annotation.AuthCheck;
 import com.kanade.aipassage.common.BaseResponse;
 import com.kanade.aipassage.common.ResultUtils;
 import com.kanade.aipassage.constant.UserConstant;
@@ -29,7 +29,7 @@ public class StatisticsController {
      */
     @GetMapping("/overview")
     @Operation(summary = "获取系统统计数据")
-    @SaCheckRole(UserConstant.ADMIN_ROLE)
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<StatisticsVO> getStatistics() {
         StatisticsVO statistics = statisticsService.getStatistics();
         return ResultUtils.success(statistics);

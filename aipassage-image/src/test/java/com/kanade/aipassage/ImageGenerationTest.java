@@ -26,6 +26,9 @@ public class ImageGenerationTest {
     private ImageServiceStrategy imageServiceStrategy;
 
     @Resource
+    private ArticleAgentService articleAgentService;
+
+    @Resource
     private CosService cosService;
 
     /**

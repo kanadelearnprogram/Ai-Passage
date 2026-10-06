@@ -1,11 +1,13 @@
 package com.kanade.aipassage.service.impl;
 
-import com.kanade.aipassage.common.feign.FeignResponseUtils;
-import com.kanade.aipassage.common.feign.UserClient;
+import com.kanade.aipassage.constant.UserConstant;
 import com.kanade.aipassage.mapper.ArticleMapper;
+import com.kanade.aipassage.mapper.UserMapper;
 import com.kanade.aipassage.model.entity.Article;
+import com.kanade.aipassage.model.entity.User;
 import com.kanade.aipassage.model.enums.ArticleStatusEnum;
 import com.kanade.aipassage.model.vo.StatisticsVO;
+import com.kanade.aipassage.service.AgentLogService;
 import com.kanade.aipassage.service.StatisticsService;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
@@ -20,8 +22,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 统计服务实现（文章侧统计在本服务完成，用户侧统计经 Feign 调 user 服务）
+ * 统计服务实现
  *
+ * @author <a href="https://codefather.cn">编程导航学习圈</a>
+
  */
 @Service
 @Slf4j
@@ -34,7 +38,10 @@ public class StatisticsServiceImpl implements StatisticsService {
     private ArticleMapper articleMapper;
 
     @Resource
-    private UserClient userClient;
+    private UserMapper userMapper;
+
+    @Resource
+    private AgentLogService agentLogService;
 
     @Resource
     private RedisTemplate<String, Object> redisTemplate;
@@ -70,8 +77,14 @@ public class StatisticsServiceImpl implements StatisticsService {
         // 活跃用户统计（本周有创作的用户）
         Long activeUserCount = countActiveUsers(getWeekStart());
 
-        // 用户侧统计（Feign → user 服务）
-        var userStats = FeignResponseUtils.unwrap(userClient.getStats());
+        // 总用户数
+        Long totalUserCount = countTotalUsers();
+
+        // VIP 用户数
+        Long vipUserCount = countVipUsers();
+
+        // 配额使用情况（总配额 - 剩余配额）
+        Long quotaUsed = calculateQuotaUsed();
 
         StatisticsVO statistics = StatisticsVO.builder()
                 .todayCount(todayCount)
@@ -81,9 +94,9 @@ public class StatisticsServiceImpl implements StatisticsService {
                 .successRate(successRate)
                 .avgDurationMs(avgDurationMs)
                 .activeUserCount(activeUserCount)
-                .totalUserCount(userStats.getTotalUserCount())
-                .vipUserCount(userStats.getVipUserCount())
-                .quotaUsed(userStats.getQuotaUsed())
+                .totalUserCount(totalUserCount)
+                .vipUserCount(vipUserCount)
+                .quotaUsed(quotaUsed)
                 .build();
 
         // 存入缓存，1 小时过期
@@ -179,6 +192,48 @@ public class StatisticsServiceImpl implements StatisticsService {
         return 0L;
     }
 
+
+    /**
+     * 统计总用户数
+     */
+    private Long countTotalUsers() {
+        return userMapper.selectCountByQuery(QueryWrapper.create());
+    }
+
+    /**
+     * 统计 VIP 用户数
+     */
+    private Long countVipUsers() {
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .eq("userRole", UserConstant.VIP_ROLE);
+        return userMapper.selectCountByQuery(queryWrapper);
+    }
+
+    /**
+     * 计算配额使用量
+     */
+    private Long calculateQuotaUsed() {
+        // 配额使用量 = (普通用户数 * 初始配额) - 当前剩余配额总和
+        QueryWrapper normalUserWrapper = QueryWrapper.create()
+                .eq("userRole", UserConstant.DEFAULT_ROLE);
+
+        try {
+            List<User> normalUsers = userMapper.selectListByQuery(normalUserWrapper);
+            Long normalUserCount = (long) normalUsers.size();
+
+            // 统计剩余配额总和
+            long remainingQuota = normalUsers.stream()
+                    .mapToInt(user -> user.getQuota() != null ? user.getQuota() : 0)
+                    .sum();
+
+            return (normalUserCount * UserConstant.DEFAULT_QUOTA) - remainingQuota;
+        } catch (Exception e) {
+            log.warn("计算配额使用量失败", e);
+        }
+
+        return 0L;
+    }
+
     /**
      * 获取今天开始时间
      */
@@ -205,3 +260,4 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
 }
+
