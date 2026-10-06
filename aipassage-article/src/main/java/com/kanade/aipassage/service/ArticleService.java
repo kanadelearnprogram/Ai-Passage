@@ -1,8 +1,9 @@
 package com.kanade.aipassage.service;
 
+import com.kanade.aipassage.common.auth.LoginUser;
+import com.kanade.aipassage.common.messaging.SaveResultRequest;
 import com.kanade.aipassage.model.dto.ArticleQueryRequest;
 import com.kanade.aipassage.model.dto.ArticleState;
-import com.kanade.aipassage.model.entity.User;
 import com.kanade.aipassage.model.enums.ArticlePhaseEnum;
 import com.kanade.aipassage.model.enums.ArticleStatusEnum;
 import com.kanade.aipassage.model.vo.ArticleVO;
@@ -19,29 +20,29 @@ import java.util.List;
  */
 public interface ArticleService extends IService<Article> {
 
-    ArticleVO getArticleDetail(String taskId, User loginUser);
+    ArticleVO getArticleDetail(String taskId, LoginUser loginUser);
 
-    String createArticleTask(String topic, String style,List<String> enabledImageMethods, User loginUser);
+    String createArticleTaskWithQuotaCheck(String topic, String style, List<String> enabledImageMethods, LoginUser loginUser);
 
-    boolean deleteArticle(Long id, User loginUser);
+    boolean deleteArticle(Long id, LoginUser loginUser);
 
-    Page<ArticleVO> listArticleByPage(ArticleQueryRequest request, User loginUser);
+    Page<ArticleVO> listArticleByPage(ArticleQueryRequest request, LoginUser loginUser);
 
     Article getByTaskId(String taskId);
 
     void updateArticleStatus(String taskId, ArticleStatusEnum articleStatusEnum, String message);
 
-    void saveArticleContent(String taskId, ArticleState state);
+    void confirmTitle(String task,String mainTitle,String subTitle, String userDescription, LoginUser loginUser);
 
-    void confirmTitle(String task,String mainTitle,String subTitle, String userDescription, User loginUser);
+    void confirmOutline(String taskId, List<ArticleState.OutlineSection> outline, LoginUser loginUser);
 
-    void confirmOutline(String taskId, List<ArticleState.OutlineSection> outline, User loginUser);
-
-    List<ArticleState.OutlineSection> aiModifyOutline(String taskId, String modifySuggestion, User loginUser);
+    List<ArticleState.OutlineSection> aiModifyOutline(String taskId, String modifySuggestion, LoginUser loginUser);
 
     void saveTitleOptions(String taskId, List<ArticleState.TitleOption> titleOptions);
 
-    void updatePhase(String taskId, ArticlePhaseEnum articlePhaseEnum);
+    void saveOutline(String taskId, List<ArticleState.OutlineSection> outlineSections);
 
-    String createArticleTaskWithQuotaCheck(String topic, String style, List<String> enabledImageMethods, User loginUser);
+    void saveContent(String taskId, SaveResultRequest request);
+
+    void updatePhase(String taskId, ArticlePhaseEnum articlePhaseEnum);
 }

@@ -35,3 +35,24 @@ sa-token:
   is-read-cookie: true
   is-read-header: true
   token-style: uuid
+
+# 网关限流规则（Redisson 令牌桶；登录用户按令牌，匿名按 IP）
+gateway:
+  rate-limit:
+    default:
+      rate: 100
+      interval-seconds: 60
+    rules:
+      - pattern: /api/article/create
+        rate: 5
+        interval-seconds: 60
+      - pattern: /api/article/confirm-title
+        rate: 10
+        interval-seconds: 60
+      - pattern: /api/article/confirm-outline
+        rate: 10
+        interval-seconds: 60
+      - pattern: /api/article/progress/**
+        rate: 10
+        interval-seconds: 60
+

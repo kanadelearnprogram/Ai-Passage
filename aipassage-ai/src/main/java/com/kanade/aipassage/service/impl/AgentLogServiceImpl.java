@@ -75,7 +75,6 @@ public class AgentLogServiceImpl extends ServiceImpl<AgentLogMapper, AgentLog>  
                 .agentCount(logs.size())
                 .agentDurations(agentDurations)
                 .overallStatus(overallStatus)
-                .logs(logs)
                 .build();
     }
     public List<AgentLog> getLogsByTaskId(String taskId) {

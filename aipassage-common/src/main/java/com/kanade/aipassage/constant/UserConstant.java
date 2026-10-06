@@ -2,9 +2,14 @@ package com.kanade.aipassage.constant;
 
 public interface UserConstant {
     /**
-     * 用户登录态键
+     * 用户登录态键（旧 Session 方案遗留，仅作兼容保留）
      */
     String USER_LOGIN_STATE = "user_login";
+
+    /**
+     * Sa-Token 账号会话中存放角色的键
+     */
+    String ROLE_SESSION_KEY = "aipassage:role";
 
     /**
      * 默认角色
