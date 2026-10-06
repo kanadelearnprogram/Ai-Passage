@@ -1,8 +1,10 @@
 package com.kanade.aipassage.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.kanade.aipassage.constant.UserConstant;
 import com.kanade.aipassage.exception.BusinessException;
 import com.kanade.aipassage.exception.ErrorCode;
 import com.kanade.aipassage.model.dto.UserQueryRequest;
@@ -14,7 +16,6 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.kanade.aipassage.model.entity.User;
 import com.kanade.aipassage.mapper.UserMapper;
 import com.kanade.aipassage.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
@@ -22,8 +23,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import static com.kanade.aipassage.constant.UserConstant.USER_LOGIN_STATE;
 
 /**
  * 用户 服务层实现。
@@ -62,6 +61,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         user.setUserPassword(encryptPassword);
         user.setUserName("无名");
         user.setUserRole(UserRoleEnum.USER.getValue());
+        user.setQuota(UserConstant.DEFAULT_QUOTA);
         boolean saveResult = this.save(user);
         if (!saveResult) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "注册失败，数据库错误");
@@ -117,7 +117,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
     }
 
     @Override
-    public LoginUserVO userLogin(String userAccount, String userPassword, HttpServletRequest request) {
+    public LoginUserVO userLogin(String userAccount, String userPassword) {
         // 1. 校验参数
         if (StrUtil.hasBlank(userAccount, userPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -132,24 +132,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         if (user == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "用户不存在或密码错误");
         }
-        // 4. 记录用户的登录态
-        request.getSession().setAttribute(USER_LOGIN_STATE, user);
+        // 4. Sa-Token 签发令牌，角色写入账号会话（Redis 共享，其余服务可读取）
+        StpUtil.login(user.getId());
+        StpUtil.getSession().set(UserConstant.ROLE_SESSION_KEY, user.getUserRole());
         // 5. 返回脱敏的用户信息
         return this.getLoginUserVO(user);
     }
 
 
     @Override
-    public User getLoginUser(HttpServletRequest request) {
-        // 先判断用户是否登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
-        }
-        // 从数据库查询当前用户信息（保证数据最新）
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
+    public User getLoginUser() {
+        long userId = StpUtil.getLoginIdAsLong();
+        User currentUser = this.getById(userId);
         if (currentUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
@@ -168,12 +162,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
     }
 
     @Override
-    public boolean userLogout(HttpServletRequest request) {
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        if (userObj == null) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "用户未登录");
-        }
-        request.getSession().removeAttribute(USER_LOGIN_STATE);
+    public boolean userLogout() {
+        StpUtil.logout();
         return true;
     }
 

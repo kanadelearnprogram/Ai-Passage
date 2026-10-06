@@ -1,7 +1,7 @@
 package com.kanade.aipassage.model.vo;
 
 
-import com.kanade.aipassage.model.entity.AgentLog;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,9 +46,4 @@ public class AgentExecutionStats implements Serializable {
      * 总体状态：SUCCESS（全部成功）、FAILED（存在失败）、RUNNING（执行中）
      */
     private String overallStatus;
-
-    /**
-     * 详细日志列表
-     */
-    private List<AgentLog> logs;
 }

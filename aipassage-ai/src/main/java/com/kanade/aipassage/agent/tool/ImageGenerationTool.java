@@ -1,9 +1,10 @@
 package com.kanade.aipassage.agent.tool;
 
+import com.kanade.aipassage.common.feign.FeignResponseUtils;
+import com.kanade.aipassage.common.feign.ImageClient;
+import com.kanade.aipassage.common.messaging.ImageGenRequest;
+import com.kanade.aipassage.common.messaging.ImageGenResult;
 import com.kanade.aipassage.model.dto.ImageRequest;
-import com.kanade.aipassage.model.enums.ImageMethodEnum;
-import com.kanade.aipassage.cos.CosService;
-import com.kanade.aipassage.image.ImageServiceStrategy;
 import com.kanade.aipassage.utils.GsonUtils;
 import jakarta.annotation.Resource;
 import lombok.Data;
@@ -15,18 +16,14 @@ import org.springframework.stereotype.Component;
 import java.io.Serializable;
 
 /**
- * 图片生成工具
- * 封装 ImageServiceStrategy，供 Agent 调用
+ * 图片生成工具：经 Feign 调用 image 服务（策略选择、两级缓存、COS 转存均在 image 服务内）
  */
 @Component
 @Slf4j
 public class ImageGenerationTool {
 
     @Resource
-    private ImageServiceStrategy imageServiceStrategy;
-
-    @Resource
-    private CosService cosService;
+    private ImageClient imageClient;
 
     /**
      * 根据需求生成或搜索图片
@@ -41,44 +38,8 @@ public class ImageGenerationTool {
             @ToolParam(description = "对应的章节标题") String sectionTitle) {
 
         log.info("ImageGenerationTool 开始执行: imageSource={}, position={}", imageSource, position);
-
-        try {
-            ImageRequest imageRequest = ImageRequest.builder()
-                    .keywords(keywords)
-                    .prompt(prompt)
-                    .position(position)
-                    .type(type)
-                    .build();
-
-            // 使用统一上传到 COS 的方法
-            ImageServiceStrategy.ImageResult result = imageServiceStrategy.getImageAndUpload(imageSource, imageRequest);
-            String cosUrl = result.getUrl();
-            ImageMethodEnum method = result.getMethod();
-
-            ImageGenerationResult generationResult = new ImageGenerationResult();
-            generationResult.setPosition(position);
-            generationResult.setUrl(cosUrl);
-            generationResult.setMethod(method.getValue());
-            generationResult.setKeywords(keywords);
-            generationResult.setSectionTitle(sectionTitle);
-            generationResult.setDescription(type);
-            generationResult.setSuccess(true);
-
-            log.info("ImageGenerationTool 执行成功: position={}, method={}", position, method.getValue());
-
-            return GsonUtils.toJson(generationResult);
-
-        } catch (Exception e) {
-            log.error("ImageGenerationTool 执行失败: imageSource={}, position={}", imageSource, position, e);
-
-            ImageGenerationResult failResult = new ImageGenerationResult();
-            failResult.setPosition(position);
-            failResult.setSuccess(false);
-            failResult.setError(e.getMessage());
-            failResult.setSectionTitle(sectionTitle);
-
-            return GsonUtils.toJson(failResult);
-        }
+        ImageGenerationResult result = generateImageDirect(imageSource, keywords, prompt, position, type, sectionTitle, null);
+        return GsonUtils.toJson(result);
     }
 
     /**
@@ -107,14 +68,13 @@ public class ImageGenerationTool {
                     .sectionTitle(sectionTitle)
                     .build();
 
-            ImageServiceStrategy.ImageResult result = imageServiceStrategy.getImageAndUpload(imageSource, imageRequest);
-            String cosUrl = result.getUrl();
-            ImageMethodEnum method = result.getMethod();
+            ImageGenResult genResult = FeignResponseUtils.unwrap(
+                    imageClient.generate(new ImageGenRequest(imageSource, imageRequest)));
 
             ImageGenerationResult generationResult = new ImageGenerationResult();
             generationResult.setPosition(position);
-            generationResult.setUrl(cosUrl);
-            generationResult.setMethod(method.getValue());
+            generationResult.setUrl(genResult.getUrl());
+            generationResult.setMethod(genResult.getMethod());
             generationResult.setKeywords(keywords);
             generationResult.setSectionTitle(sectionTitle);
             generationResult.setDescription(type);
@@ -155,4 +115,3 @@ public class ImageGenerationTool {
         private String error;
     }
 }
-
