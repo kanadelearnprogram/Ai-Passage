@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: aipassage-image
+  profiles:
+    active: local
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ap_image
+    username: root
+    password: 114514
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+
+mybatis-flex:
+  configuration:
+    map-underscore-to-camel-case: false
+
+server:
+  port: 8441
+  servlet:
+    context-path: /api
+
+# Sa-Token 配置（各服务保持一致，共享同一个 Redis）
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-read-cookie: true
+  is-read-header: true
+  token-style: uuid
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs

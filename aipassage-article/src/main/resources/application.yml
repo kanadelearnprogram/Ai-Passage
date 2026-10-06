@@ -1,43 +1,42 @@
 spring:
   application:
-    name: ai-passage-creator
+    name: aipassage-article
   profiles:
     active: local
-  # ? ???? Session
-  session:
-    redis:
-      # ??????JSON
-      serializer: json
-      flush-mode: on-save
-    # session 30 ???
-    timeout: 2592000
-  # MySQL ???????????
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/ai_passage_creator
+    url: jdbc:mysql://localhost:3306/ap_article
     username: root
     password: 114514
-  # Redis ????????
   data:
     redis:
       host: localhost
       port: 6379
       database: 0
-      password:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
 
 mybatis-flex:
   configuration:
     map-underscore-to-camel-case: false
 
 server:
-  port: 8341
+  port: 8421
   servlet:
     context-path: /api
-    session:
-      cookie:
-        max-age: 2592000
 
-# springdoc-openapi ??
+# Sa-Token 配置（各服务保持一致，共享同一个 Redis）
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-read-cookie: true
+  is-read-header: true
+  token-style: uuid
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
@@ -49,13 +48,3 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.kanade.aipassage.controller
-# 文章智能体配置
-article:
-  agent:
-    orchestrator:
-      # 是否启用多智能体编排模式（支持配图并行生成）
-      # true: 使用 Spring AI Alibaba 多智能体编排
-      # false: 使用原有的 ArticleAgentService
-      enabled: true
-    # Agent 最大迭代次数
-    max-iterations: 10

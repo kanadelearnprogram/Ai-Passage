@@ -21,6 +21,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- AgentExecutionAspect 切面 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
         <dependency>
             <groupId>com.mybatis-flex</groupId>
             <artifactId>mybatis-flex-spring-boot3-starter</artifactId>
