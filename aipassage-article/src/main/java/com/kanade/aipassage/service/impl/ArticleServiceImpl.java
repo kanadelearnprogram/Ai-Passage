@@ -220,7 +220,17 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>  imp
         String taskId = IdUtil.simpleUUID();
 
         // 先扣配额（以 taskId 幂等）；配额不足直接抛业务异常
-        FeignResponseUtils.unwrap(userClient.deductQuota(new QuotaRequest(loginUser.getId(), taskId)));
+        try {
+            FeignResponseUtils.unwrap(userClient.deductQuota(new QuotaRequest(loginUser.getId(), taskId)));
+        } catch (Exception e) {
+            // 扣减结果未知（网络/解码失败时 user 侧可能已扣），尝试补偿退还
+            try {
+                FeignResponseUtils.unwrap(userClient.refundQuota(new QuotaRequest(loginUser.getId(), taskId)));
+            } catch (Exception refundError) {
+                log.error("配额补偿退还失败, userId={}, taskId={}", loginUser.getId(), taskId, refundError);
+            }
+            throw e;
+        }
 
         try {
             // 创建文章记录
@@ -234,6 +244,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>  imp
             article.setEnabledImageMethods(finalImageMethods != null && !finalImageMethods.isEmpty()
                     ? GsonUtils.toJson(finalImageMethods) : null);
             this.save(article);
+
+            // 与单体行为一致：进入生成阶段
+            updateArticleStatus(taskId, ArticleStatusEnum.PROCESSING, null);
+            updatePhase(taskId, ArticlePhaseEnum.TITLE_GENERATING);
         } catch (Exception e) {
             // 创建失败则退还配额（补偿）
             FeignResponseUtils.unwrap(userClient.refundQuota(new QuotaRequest(loginUser.getId(), taskId)));
