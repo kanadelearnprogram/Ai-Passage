@@ -71,8 +71,11 @@ public enum SseMessageTypeEnum {
     /**
      * 错误
      */
-    ERROR("ERROR", "错误");
+    ERROR("ERROR", "错误"),
 
+    // reviewer
+    REVIEWER_COMPLETE("REVIEWER_COMPLETE","审核完成"),
+    REVIEWER_STREAMING("REVIEWER_STREAMING","流式输出"),;
     /**
      * 消息类型值
      */

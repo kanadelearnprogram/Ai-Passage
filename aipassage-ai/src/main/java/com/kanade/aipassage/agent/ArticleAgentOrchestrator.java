@@ -46,6 +46,8 @@ public class ArticleAgentOrchestrator {
     private ParallelImageGenerator parallelImageGenerator;
     @Resource
     private ContentMergerAgent contentMergerAgent;
+    @Resource
+    private ReviewerAgent reviewerAgent;
 
     // region 状态键常量
 
@@ -289,11 +291,14 @@ public class ArticleAgentOrchestrator {
                 // 节点定义
                 .addNode("content_generator", node_async(contentGeneratorAgent))
                 .addNode("image_analyzer", node_async(imageAnalyzerAgent))
+                .addNode("reviewer",node_async(reviewerAgent))
                 .addNode("parallel_image_generator", node_async(parallelImageGenerator))
                 .addNode("content_merger", node_async(contentMergerAgent))
                 // 边定义：顺序执行
                 .addEdge(START, "content_generator")
-                .addEdge("content_generator", "image_analyzer")
+                //.addEdge("content_generator", "image_analyzer")//todo reviewer
+                .addEdge("content_generator", "reviewer")
+                .addEdge("reviewer", "image_analyzer")
                 .addEdge("image_analyzer", "parallel_image_generator")
                 .addEdge("parallel_image_generator", "content_merger")
                 .addEdge("content_merger", END);

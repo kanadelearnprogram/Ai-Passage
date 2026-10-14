@@ -1,6 +1,5 @@
 package com.kanade.aipassage.service;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.google.gson.JsonSyntaxException;
 import com.kanade.aipassage.annotation.AgentExecution;
 import com.kanade.aipassage.constant.PromptConstant;
@@ -11,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,7 +23,7 @@ import java.util.List;
 public class ArticleAgentService {
 
     @Resource
-    private DashScopeChatModel chatModel;
+    private DeepSeekChatModel chatModel;
 
     /**
      * AI 修改大纲
