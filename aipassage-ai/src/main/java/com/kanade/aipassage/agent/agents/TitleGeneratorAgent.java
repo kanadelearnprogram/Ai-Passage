@@ -1,19 +1,20 @@
 package com.kanade.aipassage.agent.agents;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
-import com.alibaba.dashscope.aigc.multimodalconversation.MultiModalConversation;
 import com.google.gson.reflect.TypeToken;
 import com.kanade.aipassage.constant.PromptConstant;
 import com.kanade.aipassage.model.dto.ArticleState;
 import com.kanade.aipassage.model.enums.ArticleStyleEnum;
 import com.kanade.aipassage.utils.GsonUtils;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -28,7 +29,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TitleGeneratorAgent implements NodeAction {
 
-    private final DashScopeChatModel chatModel;
+    private final DeepSeekChatModel chatModel;
 
     public static final String INPUT_TOPIC = "topic";
     public static final String INPUT_STYLE = "style";

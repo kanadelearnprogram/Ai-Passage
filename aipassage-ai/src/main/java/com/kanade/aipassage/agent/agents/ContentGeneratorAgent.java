@@ -1,6 +1,5 @@
 package com.kanade.aipassage.agent.agents;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.kanade.aipassage.agent.context.StreamHandlerContext;
@@ -10,11 +9,13 @@ import com.kanade.aipassage.model.dto.ArticleState;
 import com.kanade.aipassage.model.enums.ArticleStyleEnum;
 import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import com.kanade.aipassage.utils.GsonUtils;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 
@@ -37,7 +38,8 @@ import java.util.stream.IntStream;
 @RequiredArgsConstructor
 public class ContentGeneratorAgent implements NodeAction {
 
-    private final DashScopeChatModel chatModel;
+
+    private final DeepSeekChatModel chatModel;
 
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_SUB_TITLE = "subTitle";

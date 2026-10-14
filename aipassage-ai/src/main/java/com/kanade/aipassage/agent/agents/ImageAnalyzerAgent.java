@@ -1,17 +1,18 @@
 package com.kanade.aipassage.agent.agents;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
 import com.kanade.aipassage.constant.PromptConstant;
 import com.kanade.aipassage.model.dto.ArticleState;
 import com.kanade.aipassage.model.enums.ImageMethodEnum;
 import com.kanade.aipassage.utils.GsonUtils;
+import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -27,8 +28,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ImageAnalyzerAgent implements NodeAction {
 
-    private final DashScopeChatModel chatModel;
+    @Resource
+    private final DeepSeekChatModel chatModel;
 
+    //todo 文章创作状态未能同步到前端
+
+    // todo ai 未能理解图片 ? 未能选择正确的图片使用方式
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_CONTENT = "content";
     public static final String INPUT_ENABLED_IMAGE_METHODS = "enabledImageMethods";
