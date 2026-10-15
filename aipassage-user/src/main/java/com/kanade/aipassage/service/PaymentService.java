@@ -11,4 +11,6 @@ public interface PaymentService {
     Event eventConstruct(String payload, String sigHeader) throws SignatureVerificationException;
 
     void handlePaymentSusses(Session session);
+
+    boolean handleRefund(Long id, String reason) throws StripeException;
 }
