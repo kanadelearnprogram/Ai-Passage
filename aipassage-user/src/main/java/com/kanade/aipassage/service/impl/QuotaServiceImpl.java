@@ -43,6 +43,9 @@ public class QuotaServiceImpl implements QuotaService {
         if (user == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "用户不存在");
         }
+        if(user.getUserRole().equals(UserConstant.VIP_ROLE)){
+            return true;
+        }
         int quota = user.getQuota() == null ? UserConstant.DEFAULT_QUOTA : user.getQuota();
         if (quota <= 0) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "创作配额不足，请充值或升级 VIP");
@@ -92,4 +95,5 @@ public class QuotaServiceImpl implements QuotaService {
         long quotaUsed = normalCount * UserConstant.DEFAULT_QUOTA - remaining;
         return new UserStatsDTO(totalUserCount, vipUserCount, quotaUsed);
     }
+    // todo 配额
 }

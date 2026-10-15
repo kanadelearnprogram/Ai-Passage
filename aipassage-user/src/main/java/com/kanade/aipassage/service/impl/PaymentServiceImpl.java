@@ -107,6 +107,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     }
 
+    // todo 退款
+
     private Session createStripeSession(Long id, ProductTypeEnum productType) throws StripeException {
         long amountInCents = productType.getPrice().multiply(new BigDecimal(CENTS_MULTIPLIER)).longValue();
 
