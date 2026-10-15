@@ -3,8 +3,11 @@ package com.kanade.aipassage.controller;
 import cn.dev33.satoken.stp.StpUtil;
 import com.kanade.aipassage.common.BaseResponse;
 import com.kanade.aipassage.common.ResultUtils;
+import com.kanade.aipassage.exception.BusinessException;
+import com.kanade.aipassage.exception.ErrorCode;
 import com.kanade.aipassage.service.PaymentService;
 import com.kanade.aipassage.service.UserService;
+import com.stripe.exception.StripeException;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,9 +28,13 @@ public class PaymentController {
     // 创建支付
     @PostMapping("/create")
     public BaseResponse<String> createPayment() {
-        String id = StpUtil.getSession().getId();
+        Long id = StpUtil.getLoginIdAsLong();
         //支付
-        String url = paymentService.creatPaymentSession(id);
-        return ResultUtils.success(url);
+        try {
+            String url = paymentService.creatPaymentSession(id);
+            return ResultUtils.success(url);
+        } catch (StripeException e) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"支付失败");
+        }
     }
 }
