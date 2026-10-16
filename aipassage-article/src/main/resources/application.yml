@@ -48,3 +48,7 @@ springdoc:
     - group: 'default'
       paths-to-match: '/**'
       packages-to-scan: com.kanade.aipassage.controller
+rocketmq:
+  name-server: 127.0.0.1:9876
+  producer:
+    group: aipassage-article-producer

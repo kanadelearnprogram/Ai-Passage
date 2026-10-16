@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 /**
  * 任务消费者：从 Redis Stream 读取文章任务，执行后手动 ACK
  */
+/*
 @Service
 @Slf4j
 public class TaskConsumer implements StreamListener<String, MapRecord<String, String, String>> {
@@ -40,3 +41,4 @@ public class TaskConsumer implements StreamListener<String, MapRecord<String, St
         }
     }
 }
+*/

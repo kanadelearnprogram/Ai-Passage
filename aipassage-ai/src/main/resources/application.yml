@@ -45,3 +45,6 @@ article:
 springdoc:
   api-docs:
     path: /v3/api-docs
+
+rocketmq:
+  name-server: 127.0.0.1:9876

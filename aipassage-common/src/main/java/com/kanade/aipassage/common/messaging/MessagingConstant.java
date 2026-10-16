@@ -16,4 +16,7 @@ public interface MessagingConstant {
 
     /** 配额扣减幂等标记前缀（后接 taskId） */
     String QUOTA_TASK_PREFIX = "aipassage:quota:task:";
+
+    // rocketmq
+    String TASK_TOPIC = "AIPASSAGE_TASK";
 }

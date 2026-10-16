@@ -1,7 +1,6 @@
 package com.kanade.aipassage.config;
 
 import com.kanade.aipassage.common.messaging.MessagingConstant;
-import com.kanade.aipassage.service.TaskConsumer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +18,7 @@ import java.util.UUID;
 /**
  * Redis Stream 消费配置：创建消费组（幂等）并启动任务监听
  */
-@Slf4j
+/*@Slf4j
 @Configuration
 public class RedisStreamConfig {
 
@@ -54,4 +53,4 @@ public class RedisStreamConfig {
         log.info("Redis Stream 任务监听已注册, consumer={}", consumerName);
         return container;
     }
-}
+}*/
