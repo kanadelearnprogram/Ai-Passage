@@ -52,3 +52,12 @@ rocketmq:
   name-server: 127.0.0.1:9876
   producer:
     group: aipassage-article-producer
+
+feign:
+  sentinel:
+    enabled: true
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 5000

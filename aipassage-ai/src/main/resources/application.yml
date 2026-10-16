@@ -14,10 +14,19 @@ spring:
       port: 6379
       database: 0
   cloud:
+    sentinel:
+      # dashboard 可后置（计划 §4.3 第 1 条）；未起 dashboard 时可注释此行
+      transport:
+        # dashboard: 127.0.0.1:8080
+      datasource:
+        degrade:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: sentinel-degrade-rules.json
+            rule-type: degrade
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
-
 mybatis-flex:
   configuration:
     map-underscore-to-camel-case: false

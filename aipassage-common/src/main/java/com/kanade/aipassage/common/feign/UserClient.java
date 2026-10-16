@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 /**
  * 用户服务内部客户端（article → user）
  */
-@FeignClient(name = "aipassage-user", path = "/api/internal/user")
+@FeignClient(name = "aipassage-user", path = "/api/internal/user", fallbackFactory = UserClientFallbackFactory.class)
 public interface UserClient {
 
     /**

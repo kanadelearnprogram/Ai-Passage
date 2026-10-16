@@ -12,6 +12,13 @@ spring:
       port: 6379
       database: 0
   cloud:
+    sentinel:
+      datasource:
+        gw-flow:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: sentinel-gateway-flow-rules.json
+            rule-type: gw-flow
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
