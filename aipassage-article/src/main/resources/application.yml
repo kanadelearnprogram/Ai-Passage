@@ -14,6 +14,13 @@ spring:
       port: 6379
       database: 0
   cloud:
+    sentinel:
+      datasource:
+        degrade: # 任意名字，仅是数据源注册键
+          nacos:
+            server-addr: 127.0.0.1:8848   # ① 必填：Nacos 地址
+            dataId: sentinel-degrade-rules.json   # ② 必填：Nacos 上的规则 JSON（你少写的其实是这行）
+            rule-type: degrade            # ③ 必填：告诉 Sentinel 按 DegradeRule 解析 JSON
     nacos:
       discovery:
         server-addr: 127.0.0.1:8848
