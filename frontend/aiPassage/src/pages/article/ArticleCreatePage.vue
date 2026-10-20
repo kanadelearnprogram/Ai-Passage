@@ -209,7 +209,7 @@
             </div>
 
             <!-- 配图进度 -->
-            <div v-if="currentStep === 4 && imageProgress > 0" class="image-progress-box">
+            <div v-if="imageCount > 0 && !isCompleted && currentStep >= 3" class="image-progress-box">
               <div class="progress-header">
                 <PictureOutlined />
                 <span>正在生成配图</span>
@@ -610,6 +610,12 @@ const isCompleted = ref(false)
 const isStreaming = ref(false)
 const isOutlineStreaming = ref(false)
 const currentStep = ref(0)
+
+// 步骤只前进不后退：STEP_UPDATE 补推/重连不会把步骤条打回去
+const advanceStep = (step: number) => {
+  currentStep.value = Math.max(currentStep.value, step)
+}
+
 const taskId = ref('')
 const errorVisible = ref(false)
 const errorMessage = ref('')
@@ -781,7 +787,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'AGENT1_COMPLETE':
       // 智能体1完成，进入标题生成阶段（显示加载）
       currentPhase.value = 'TITLE_GENERATING'
-      currentStep.value = 1
+      advanceStep(1)
       break
 
     case 'TITLES_GENERATED':
@@ -824,7 +830,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
 
     case 'AGENT2_COMPLETE':
       // 大纲完成（内部处理，已在 OUTLINE_GENERATED 中切换阶段）
-      currentStep.value = 2
+      advanceStep(2)
       break
 
     case 'AGENT3_STREAMING':
@@ -876,29 +882,41 @@ const handleSSEMessage = (msg: SSEMessage) => {
       }
       break
 
+    case 'STEP_UPDATE':
+      // 节点实时埋点的步骤推进（幂等，补推/重连不会打回步骤）
+      if (typeof msg.step === 'number') {
+        advanceStep(msg.step)
+      }
+      // 配图分析节点结束时携带配图总数，先于 IMAGE_COMPLETE 修正进度分母
+      if (typeof msg.imageRequirements === 'number' && msg.imageRequirements > 0) {
+        totalImages.value = msg.imageRequirements
+      }
+      break
+
     case 'AGENT3_COMPLETE':
       // 正文完成，进入配图分析步骤
       isStreaming.value = false
-      currentStep.value = 3
-      console.log('AGENT3_COMPLETE: currentStep 设置为', currentStep.value)
+      advanceStep(3)
       // 注意：不改变 currentPhase，保持在 CONTENT_GENERATING 以继续显示正文内容
       break
 
     case 'AGENT4_COMPLETE':
       // 配图分析完成，进入配图生成步骤
-      currentStep.value = 4
-      totalImages.value = msg.imageRequirements?.length || 5
+      advanceStep(4)
+      totalImages.value = msg.imageRequirements?.length || totalImages.value
       break
 
     case 'IMAGE_COMPLETE':
       // 单张配图完成
       imageCount.value++
-      imageProgress.value = Math.round((imageCount.value / totalImages.value) * 100)
+      imageProgress.value = totalImages.value > 0
+        ? Math.min(100, Math.round((imageCount.value / totalImages.value) * 100))
+        : 0
       break
 
     case 'AGENT5_COMPLETE':
       // 所有配图完成，进入图文合成步骤
-      currentStep.value = 5
+      advanceStep(5)
       article.value.images = msg.images
       break
 
@@ -916,7 +934,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       article.value.content = chapterContents.value.filter(c => c).join('\n\n')
 
       currentPhase.value = 'COMPLETED'
-      currentStep.value = 6
+      advanceStep(6)
       isCompleted.value = true
       isStreaming.value = false
       message.success('文章创作完成!')
