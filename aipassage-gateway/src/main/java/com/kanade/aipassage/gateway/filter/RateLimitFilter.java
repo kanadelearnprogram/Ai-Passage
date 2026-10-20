@@ -50,7 +50,7 @@ public class RateLimitFilter implements GlobalFilter, Ordered {
         RRateLimiter limiter = redissonClient.getRateLimiter(redisKey);
 
         // RRateLimiter 为阻塞 API，放到弹性线程池执行
-        return Mono.fromCallable(() -> {
+        return Mono.fromCallable(() -> { //订阅时调用 执行lambda
                     limiter.trySetRate(RateType.OVERALL, rule.getRate(), rule.getIntervalSeconds(), RateIntervalUnit.SECONDS);
                     return limiter.tryAcquire();
                 })

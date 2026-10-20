@@ -34,6 +34,8 @@ public class ImageAnalyzerAgent implements NodeAction {
     //todo 文章创作状态未能同步到前端
 
     // todo ai 未能理解图片 ? 未能选择正确的图片使用方式
+    // todo 每段图片数量不能过多 <=2
+
     public static final String INPUT_MAIN_TITLE = "mainTitle";
     public static final String INPUT_CONTENT = "content";
     public static final String INPUT_ENABLED_IMAGE_METHODS = "enabledImageMethods";

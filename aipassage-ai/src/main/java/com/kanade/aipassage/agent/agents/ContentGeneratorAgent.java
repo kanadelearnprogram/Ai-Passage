@@ -88,7 +88,9 @@ public class ContentGeneratorAgent implements NodeAction {
         
         // 使用ConcurrentHashMap保证线程安全,Key为章节索引,Value为章节内容
         ConcurrentHashMap<Integer, String> sectionContents = new ConcurrentHashMap<>();
-        
+
+        // todo 让ai搜索相关内容后在撰写文章
+
         // 并行生成每个章节的内容
         List<CompletableFuture<Void>> futures = IntStream.range(0, outline.getSections().size())
                 .mapToObj(index -> {

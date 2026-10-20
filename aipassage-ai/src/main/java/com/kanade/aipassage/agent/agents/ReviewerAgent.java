@@ -28,6 +28,9 @@ public class ReviewerAgent implements NodeAction {
 
     @Override
     public Map<String, Object> apply(OverAllState state) throws Exception {
+
+        //todo 等待重构 有那些好的方法 是否可以使用条件边 并行?
+
         String content = state.value(INPUT_CONTENT)
                 .map(Object::toString)
                 .orElseThrow(() -> new IllegalArgumentException("缺少输入内容参数"));
@@ -53,6 +56,9 @@ public class ReviewerAgent implements NodeAction {
         })
         .doOnError(error -> log.error("ContentGeneratorAgent 流式调用失败", error))
         .blockLast();
+
+        // todo 状态同步到前端之后几个都没有推送完成状态
+
         return Map.of(OUTPUT_CONTENT, stringBuilder.toString());
     }
 }

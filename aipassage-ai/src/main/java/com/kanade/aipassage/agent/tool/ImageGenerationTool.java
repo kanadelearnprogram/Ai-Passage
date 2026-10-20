@@ -42,6 +42,8 @@ public class ImageGenerationTool {
         return GsonUtils.toJson(result);
     }
 
+    // todo 让ai检查图片是否符合要求 不符合重新生成搜索
+
     /**
      * 直接生成图片（不通过 Agent，供内部调用）
      */
