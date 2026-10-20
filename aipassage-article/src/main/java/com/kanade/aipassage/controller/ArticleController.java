@@ -11,12 +11,17 @@ import com.kanade.aipassage.common.messaging.TaskMessage;
 import com.kanade.aipassage.exception.ErrorCode;
 import com.kanade.aipassage.exception.ThrowUtils;
 import com.kanade.aipassage.model.dto.*;
+import com.kanade.aipassage.model.entity.Article;
+import com.kanade.aipassage.model.enums.ArticlePhaseEnum;
+import com.kanade.aipassage.model.enums.ArticleStatusEnum;
 import com.kanade.aipassage.model.enums.ArticleStyleEnum;
+import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import com.kanade.aipassage.model.vo.AgentExecutionStats;
 import com.kanade.aipassage.model.vo.ArticleVO;
 import com.kanade.aipassage.service.ArticleService;
 import com.kanade.aipassage.service.TaskProducer;
 import com.kanade.aipassage.sse.SseEmitterManager;
+import com.kanade.aipassage.utils.GsonUtils;
 import com.mybatisflex.core.paginate.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.annotation.Resource;
@@ -24,7 +29,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -60,8 +67,68 @@ public class ArticleController {
         // 创建 SSE Emitter
         SseEmitter emitter = sseEmitterManager.createEmitter(taskId);
 
+        // 按数据库当前状态补发快照，弥补连接建立前错过的消息（晚连接/断线重连）
+        sendStateSnapshot(taskId);
+
         log.info("SSE 连接已建立, taskId={}", taskId);
         return emitter;
+    }
+
+    /**
+     * 连接建立时把当前进度重放给前端，复用页面已支持的消息类型，前端无需感知。
+     * 只有终态（COMPLETED/FAILED）才会关闭连接；生成中补发已有结果后继续等实时消息。
+     */
+    private void sendStateSnapshot(String taskId) {
+        Article article = articleService.getByTaskId(taskId);
+        if (article == null) {
+            return;
+        }
+        String status = article.getStatus();
+        if (ArticleStatusEnum.FAILED.getValue().equals(status)) {
+            Map<String, Object> data = new HashMap<>();
+            data.put("type", SseMessageTypeEnum.ERROR.getValue());
+            data.put("message", article.getErrorMessage() == null ? "生成失败" : article.getErrorMessage());
+            sseEmitterManager.send(taskId, GsonUtils.toJson(data));
+            sseEmitterManager.complete(taskId);
+            return;
+        }
+        if (ArticleStatusEnum.COMPLETED.getValue().equals(status)) {
+            Map<String, Object> merge = new HashMap<>();
+            merge.put("fullContent", article.getFullContent() == null ? "" : article.getFullContent());
+            sendSnapshot(taskId, SseMessageTypeEnum.MERGE_COMPLETE, merge);
+            sendSnapshot(taskId, SseMessageTypeEnum.ALL_COMPLETE, Map.of("taskId", taskId));
+            sseEmitterManager.complete(taskId);
+            return;
+        }
+        String phase = article.getPhase();
+        if (ArticlePhaseEnum.TITLE_SELECTING.getValue().equals(phase)) {
+            sendJsonSnapshot(taskId, SseMessageTypeEnum.TITLES_GENERATED, "titleOptions", article.getTitleOptions());
+        } else if (ArticlePhaseEnum.OUTLINE_EDITING.getValue().equals(phase)) {
+            sendJsonSnapshot(taskId, SseMessageTypeEnum.OUTLINE_GENERATED, "outline", article.getOutline());
+        } else if (ArticlePhaseEnum.CONTENT_GENERATING.getValue().equals(phase)) {
+            // 正文流式 chunk 无法重放，先把大纲和步骤对齐，后续实时 chunk 继续推送
+            sendJsonSnapshot(taskId, SseMessageTypeEnum.OUTLINE_GENERATED, "outline", article.getOutline());
+            sendJsonSnapshot(taskId, SseMessageTypeEnum.AGENT2_COMPLETE, "outline", article.getOutline());
+        }
+    }
+
+    private void sendSnapshot(String taskId, SseMessageTypeEnum type, Map<String, Object> data) {
+        Map<String, Object> message = new HashMap<>();
+        message.put("type", type.getValue());
+        message.putAll(data);
+        sseEmitterManager.send(taskId, GsonUtils.toJson(message));
+    }
+
+    /**
+     * 数据库里以 JSON 字符串保存的字段（titleOptions/outline）解析后原样塞进消息
+     */
+    private void sendJsonSnapshot(String taskId, SseMessageTypeEnum type, String key, String json) {
+        if (json == null || json.isBlank()) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put(key, GsonUtils.fromJson(json, Object.class));
+        sendSnapshot(taskId, type, data);
     }
 
     /**
