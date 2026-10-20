@@ -32,6 +32,14 @@ spring:
           uri: lb://aipassage-article
           predicates:
             - Path=/api/article/**,/api/statistics/**,/api/health/**
+        - id: payment
+          uri: lb://aipassage-user
+          predicates:
+            - Path=/api/payment/**
+        - id: stripe-webhook
+          uri: lb://aipassage-user
+          predicates:
+            - Path=/api/webhook/**
 
 # Sa-Token 配置（与各服务保持一致，共享同一个 Redis 校验令牌）
 sa-token:

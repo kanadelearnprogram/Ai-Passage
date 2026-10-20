@@ -19,6 +19,7 @@ public class SaTokenGatewayConfig {
                         "/api/user/login",
                         "/api/user/register",
                         "/api/health/**",
+                        "/api/webhook/**",
                         "/favicon.ico",
                         "/v3/api-docs/**",
                         "/swagger-ui/**",
