@@ -31,6 +31,7 @@
               <a-avatar :src="loginUserStore.loginUser.userAvatar" :size="36" class="user-avatar" />
               <span class="user-name">
                 {{ loginUserStore.loginUser.userName ?? '无名' }}
+                <span v-if="loginUserStore.loginUser.userRole === 'vip'" class="vip-badge">VIP</span>
               </span>
             </a-space>
             <template #overlay>
@@ -63,7 +64,8 @@ import {
   EditOutlined,
   UnorderedListOutlined,
   SettingOutlined,
-  BarChartOutlined
+  BarChartOutlined,
+  CrownOutlined
 } from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
@@ -91,6 +93,11 @@ const originItems = [
     key: '/article/list',
     icon: UnorderedListOutlined,
     label: '历史',
+  },
+  {
+    key: '/vip',
+    icon: CrownOutlined,
+    label: '会员中心',
   },
   {
     key: '/admin/userManage',
@@ -326,5 +333,17 @@ const doLogout = async () => {
   .user-name {
     display: none;
   }
+}
+.vip-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #f6d365, #fda085);
+  border-radius: 8px;
+  vertical-align: middle;
 }
 </style>

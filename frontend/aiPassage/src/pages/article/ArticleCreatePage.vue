@@ -103,6 +103,7 @@
                 <div v-if="!hasQuota" class="quota-warning">
                   <WarningOutlined />
                   <span>配额已用完，无法创建文章</span>
+                  <RouterLink to="/vip" class="vip-link">开通会员</RouterLink>
                 </div>
               </div>
             </div>
@@ -2098,6 +2099,11 @@ onBeforeUnmount(() => {
   .main-content {
     padding: 20px;
   }
+}
+.vip-link {
+  margin-left: 8px;
+  font-weight: 600;
+  color: #faad14;
 }
 </style>
 
