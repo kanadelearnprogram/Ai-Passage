@@ -48,7 +48,6 @@ public class ReviewerAgent implements NodeAction {
                 stringBuilder.append(chunk);
                 if (consumer != null) {
                     String message = SseMessageTypeEnum.REVIEWER_STREAMING.getStreamingPrefix()
-                            +":"
                             + chunk;
                     consumer.accept(message);
                 }

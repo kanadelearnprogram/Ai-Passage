@@ -75,7 +75,22 @@ public enum SseMessageTypeEnum {
 
     // reviewer
     REVIEWER_COMPLETE("REVIEWER_COMPLETE","审核完成"),
-    REVIEWER_STREAMING("REVIEWER_STREAMING","流式输出"),;
+    REVIEWER_STREAMING("REVIEWER_STREAMING","流式输出"),
+
+    /**
+     * 步骤推进（载荷：step/stepId/label/imageRequirements，替代裸 *_COMPLETE 的步骤推进）
+     */
+    STEP_UPDATE("STEP_UPDATE", "步骤推进"),
+
+    /**
+     * 审核开始
+     */
+    REVIEW_START("REVIEW_START", "审核开始"),
+
+    /**
+     * 审核轮次结论
+     */
+    REVIEW_ROUND("REVIEW_ROUND", "审核轮次结论"),;
     /**
      * 消息类型值
      */

@@ -147,15 +147,7 @@ public class ContentGeneratorAgent implements NodeAction {
         
         log.info("ContentGeneratorAgent 执行完成: 正文长度={}", content.length());
 
-        // 发送 AGENT3_COMPLETE 消息，通知前端正文生成完成
-        if (streamHandler != null) {
-            try {
-                streamHandler.accept(SseMessageTypeEnum.AGENT3_COMPLETE.getValue());
-                log.info("已发送 AGENT3_COMPLETE 消息");
-            } catch (Exception e) {
-                log.error("发送 AGENT3_COMPLETE 消息失败", e);
-            }
-        }
+        // 完成语义由 article 服务在结果落库后统一补推 AGENT3_COMPLETE，此处不再发送
 
         return Map.of(OUTPUT_CONTENT, content);
     }

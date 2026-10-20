@@ -2,9 +2,11 @@ package com.kanade.aipassage.agent.agents;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.kanade.aipassage.agent.context.StreamHandlerContext;
 import com.kanade.aipassage.constant.PromptConstant;
 import com.kanade.aipassage.model.dto.ArticleState;
 import com.kanade.aipassage.model.enums.ImageMethodEnum;
+import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import com.kanade.aipassage.utils.GsonUtils;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +18,10 @@ import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * 配图需求分析 Agent
@@ -64,6 +68,17 @@ public class ImageAnalyzerAgent implements NodeAction {
 
         log.info("ImageAnalyzerAgent 开始执行: mainTitle={}, enabledMethods={}", mainTitle, enabledMethods);
 
+        // 节点开始：推进前端步骤条到"分析配图"
+        Consumer<String> streamHandler = StreamHandlerContext.get();
+        if (streamHandler != null) {
+            Map<String, Object> stepMessage = new HashMap<>();
+            stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
+            stepMessage.put("step", 3);
+            stepMessage.put("stepId", "image_analyze");
+            stepMessage.put("label", "分析配图");
+            streamHandler.accept(GsonUtils.toJson(stepMessage));
+        }
+
         // 构建可用配图方式说明
         String availableMethods = buildAvailableMethodsDescription(enabledMethods);
         // 构建各配图方式的详细使用指南（只包含允许的方式）
@@ -94,6 +109,17 @@ public class ImageAnalyzerAgent implements NodeAction {
 
         log.info("ImageAnalyzerAgent 执行完成: 配图需求数量={}, 验证后数量={}",
                 agent4Result.getImageRequirements().size(), validatedRequirements.size());
+
+        // 节点结束：携带配图总数，先于 IMAGE_COMPLETE 修正前端进度分母
+        if (streamHandler != null) {
+            Map<String, Object> stepMessage = new HashMap<>();
+            stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
+            stepMessage.put("step", 3);
+            stepMessage.put("stepId", "image_analyze");
+            stepMessage.put("label", "分析配图");
+            stepMessage.put("imageRequirements", validatedRequirements.size());
+            streamHandler.accept(GsonUtils.toJson(stepMessage));
+        }
 
         // 返回结果
         return Map.of(

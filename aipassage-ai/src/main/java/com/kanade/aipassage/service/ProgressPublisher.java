@@ -2,7 +2,6 @@ package com.kanade.aipassage.service;
 
 import com.kanade.aipassage.common.messaging.MessagingConstant;
 import com.kanade.aipassage.common.messaging.ProgressEvent;
-import com.kanade.aipassage.model.dto.ArticleState;
 import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import com.kanade.aipassage.utils.GsonUtils;
 import com.google.gson.reflect.TypeToken;
@@ -42,28 +41,22 @@ public class ProgressPublisher {
     }
 
     private String convert(String message) {
-        // 流式正文（带前缀）
-        String streamingPrefix2 = SseMessageTypeEnum.AGENT2_STREAMING.getStreamingPrefix();
-        String streamingPrefix3 = SseMessageTypeEnum.AGENT3_STREAMING.getStreamingPrefix();
-        String imageCompletePrefix = SseMessageTypeEnum.IMAGE_COMPLETE.getStreamingPrefix();
-
-        if (message.startsWith(streamingPrefix2)) {
-            return buildStreamingData(SseMessageTypeEnum.AGENT2_STREAMING,
-                    message.substring(streamingPrefix2.length()));
-        }
-        if (message.startsWith(streamingPrefix3)) {
-            return buildStreamingData(SseMessageTypeEnum.AGENT3_STREAMING,
-                    message.substring(streamingPrefix3.length()));
-        }
-        if (message.startsWith(imageCompletePrefix)) {
-            String imageJson = message.substring(imageCompletePrefix.length());
-            Map<String, Object> data = new HashMap<>();
-            data.put("type", SseMessageTypeEnum.IMAGE_COMPLETE.getValue());
-            data.put("image", GsonUtils.fromJson(imageJson, ArticleState.ImageResult.class));
-            return GsonUtils.toJson(data);
+        // 1. 流式消息：任意 *_STREAMING 枚举按前缀通配（AGENT2_STREAMING/AGENT3_STREAMING/REVIEWER_STREAMING…），
+        //    新增流式枚举无需再改这里
+        int colonIndex = message.indexOf(':');
+        if (colonIndex > 0) {
+            String prefix = message.substring(0, colonIndex);
+            if (prefix.endsWith("_STREAMING")) {
+                try {
+                    SseMessageTypeEnum type = SseMessageTypeEnum.valueOf(prefix);
+                    return buildStreamingData(type, message.substring(colonIndex + 1));
+                } catch (IllegalArgumentException ignored) {
+                    // 未知的 *_STREAMING 前缀，继续走后续规则
+                }
+            }
         }
 
-        // JSON 透传（如章节完成等自带 type 的消息）
+        // 2. JSON 透传（如章节完成、STEP_UPDATE、IMAGE_COMPLETE 等自带 type 的消息）
         if (message.trim().startsWith("{")) {
             try {
                 Map<String, Object> jsonMessage = GsonUtils.fromJson(message, new TypeToken<Map<String, Object>>() {});
@@ -75,8 +68,20 @@ public class ProgressPublisher {
             }
         }
 
-        // 其余（裸枚举的 *_COMPLETE 等）由 article 侧在结果落库时统一推送
+        // 3. 裸枚举兜底：包装为 {"type": <枚举>} 发出，不再静默丢弃
+        if (isKnownEnumValue(message)) {
+            return GsonUtils.toJson(Map.of("type", message));
+        }
         return null;
+    }
+
+    private boolean isKnownEnumValue(String message) {
+        for (SseMessageTypeEnum type : SseMessageTypeEnum.values()) {
+            if (type.getValue().equals(message)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String buildStreamingData(SseMessageTypeEnum type, String content) {

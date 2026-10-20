@@ -8,7 +8,6 @@ import com.kanade.aipassage.agent.context.StreamHandlerContext;
 import com.kanade.aipassage.agent.parallel.ParallelImageGenerator;
 import com.kanade.aipassage.config.AgentConfig;
 import com.kanade.aipassage.model.dto.ArticleState;
-import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -97,7 +96,6 @@ public class ArticleAgentOrchestrator {
 
                 if (titleOptions != null) {
                     state.setTitleOptions(titleOptions);
-                    streamHandler.accept(SseMessageTypeEnum.AGENT1_COMPLETE.getValue());
                     log.info("阶段1（多智能体编排）：标题方案生成完成, 数量={}", titleOptions.size());
                 } else {
                     throw new RuntimeException("标题方案生成失败：结果为空");
@@ -148,7 +146,6 @@ public class ArticleAgentOrchestrator {
 
                 if (outline != null) {
                     state.setOutline(outline);
-                    streamHandler.accept(SseMessageTypeEnum.AGENT2_COMPLETE.getValue());
                     log.info("阶段2（多智能体编排）：大纲生成完成, 章节数={}", outline.getSections().size());
                 } else {
                     throw new RuntimeException("大纲生成失败：结果为空");
@@ -221,21 +218,17 @@ public class ArticleAgentOrchestrator {
                 } else if (content != null) {
                     state.setContent(content);
                 }
-                streamHandler.accept(SseMessageTypeEnum.AGENT3_COMPLETE.getValue());
 
                 if (imageRequirements != null) {
                     state.setImageRequirements(imageRequirements);
-                    streamHandler.accept(SseMessageTypeEnum.AGENT4_COMPLETE.getValue());
                 }
 
                 if (images != null) {
                     state.setImages(images);
-                    streamHandler.accept(SseMessageTypeEnum.AGENT5_COMPLETE.getValue());
                 }
 
                 if (fullContent != null) {
                     state.setFullContent(fullContent);
-                    streamHandler.accept(SseMessageTypeEnum.MERGE_COMPLETE.getValue());
                 }
 
                 log.info("阶段3（多智能体编排）：正文+配图生成完成, 正文长度={}, 图片数={}",

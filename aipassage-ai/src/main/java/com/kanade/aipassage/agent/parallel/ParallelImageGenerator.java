@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -59,6 +60,16 @@ public class ParallelImageGenerator implements NodeAction {
 
         // 从 ThreadLocal 获取流式处理器
         Consumer<String> streamHandler = StreamHandlerContext.get();
+
+        // 节点开始：推进前端步骤条到"生成配图"
+        if (streamHandler != null) {
+            Map<String, Object> stepMessage = new HashMap<>();
+            stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
+            stepMessage.put("step", 4);
+            stepMessage.put("stepId", "image_generate");
+            stepMessage.put("label", "生成配图");
+            streamHandler.accept(GsonUtils.toJson(stepMessage));
+        }
 
         log.info("ParallelImageGenerator 开始执行: 配图需求数量={}, mainTitle={}", imageRequirements.size(), mainTitle);
 
@@ -134,11 +145,12 @@ public class ParallelImageGenerator implements NodeAction {
                                 ArticleState.ImageResult imageResult = convertToImageResult(result);
                                 allImages.add(imageResult);
 
-                                // 推送单张配图完成消息
+                                // 推送单张配图完成消息（统一 JSON 协议，convert() 不再特判前缀）
                                 if (streamHandler != null) {
-                                    String message = SseMessageTypeEnum.IMAGE_COMPLETE.getStreamingPrefix()
-                                            + GsonUtils.toJson(imageResult);
-                                    streamHandler.accept(message);
+                                    Map<String, Object> imageMessage = new HashMap<>();
+                                    imageMessage.put("type", SseMessageTypeEnum.IMAGE_COMPLETE.getValue());
+                                    imageMessage.put("image", imageResult);
+                                    streamHandler.accept(GsonUtils.toJson(imageMessage));
                                 }
 
                                 log.info("图片生成成功: imageSource={}, position={}",

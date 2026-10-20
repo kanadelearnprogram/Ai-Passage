@@ -2,16 +2,20 @@ package com.kanade.aipassage.agent.agents;
 
 import com.alibaba.cloud.ai.graph.OverAllState;
 import com.alibaba.cloud.ai.graph.action.NodeAction;
+import com.kanade.aipassage.agent.context.StreamHandlerContext;
 import com.kanade.aipassage.agent.tool.ImageGenerationTool;
 import com.kanade.aipassage.model.dto.ArticleState;
+import com.kanade.aipassage.model.enums.SseMessageTypeEnum;
 import com.kanade.aipassage.utils.GsonUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * 图文合成 Agent
@@ -54,6 +58,17 @@ public class ContentMergerAgent implements NodeAction {
         String fullContent = mergeImagesIntoContent(content, images);
 
         log.info("ContentMergerAgent 执行完成: 完整内容长度={}", fullContent.length());
+
+        // 节点结束：推进前端步骤条到"图文合成"
+        Consumer<String> streamHandler = StreamHandlerContext.get();
+        if (streamHandler != null) {
+            Map<String, Object> stepMessage = new HashMap<>();
+            stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
+            stepMessage.put("step", 5);
+            stepMessage.put("stepId", "merge");
+            stepMessage.put("label", "图文合成");
+            streamHandler.accept(GsonUtils.toJson(stepMessage));
+        }
 
         return Map.of(OUTPUT_FULL_CONTENT, fullContent);
     }
