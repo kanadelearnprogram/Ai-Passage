@@ -1,10 +1,10 @@
 package com.kanade.aipassage;
 
-import com.alibaba.cloud.ai.dashscope.chat.DashScopeChatModel;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.boot.test.context.SpringBootTest;
 import reactor.core.publisher.Flux;
 
@@ -12,7 +12,7 @@ import reactor.core.publisher.Flux;
 public class AgentTest {
 
     @Resource
-    private DashScopeChatModel chatModel;
+    private DeepSeekChatModel chatModel;
 
     @Test
     public void testChat() {
