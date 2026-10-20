@@ -772,6 +772,7 @@ const startCreate = async () => {
 
 // 处理 SSE 消息
 const handleSSEMessage = (msg: SSEMessage) => {
+  reconnectNotified = false
   console.log('=== 收到 SSE 消息 ===')
   console.log('消息类型:', msg.type)
   console.log('完整消息:', JSON.stringify(msg, null, 2))
@@ -974,10 +975,14 @@ const handleConfirmOutline = async (outlineData: Array<{section: number, title: 
 }
 
 // 处理 SSE 错误
+let reconnectNotified = false
 const handleSSEError = (error: Event) => {
   console.error('SSE错误:', error)
-  message.error('连接失败,请重试')
-  isCreating.value = false
+  // EventSource 自动重连，服务端重连后会补发当前状态快照，页面状态无需重置
+  if (!reconnectNotified) {
+    message.warning('连接中断，正在重连...')
+    reconnectNotified = true
+  }
 }
 
 // 处理 SSE 完成

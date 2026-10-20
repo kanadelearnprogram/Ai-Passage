@@ -41,8 +41,9 @@ export const connectSSE = (taskId: string, options: SSEOptions): EventSource => 
 
     eventSource.onerror = (error) => {
         console.error('SSE 连接错误:', error)
+        // 不主动 close：EventSource 会自动重连，
+        // 服务端在连接建立时会按数据库状态补发快照，重连后页面状态能自动对齐
         onError?.(error)
-        eventSource.close()
     }
 
     return eventSource
