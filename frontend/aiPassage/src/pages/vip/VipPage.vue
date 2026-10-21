@@ -21,7 +21,16 @@
         class="callback-alert"
       />
 
-      <div class="plan-card">
+      <!-- 管理员：显示管理员标识，无需开通会员 -->
+      <div v-if="isAdmin" class="plan-card admin-card">
+        <div class="plan-title">
+          <CrownOutlined />
+          你是管理员
+        </div>
+        <div class="admin-tip">管理员已享有全部功能权限，无需开通会员</div>
+      </div>
+
+      <div v-else class="plan-card">
         <div class="plan-title">
           <CrownOutlined />
           永久会员
@@ -66,6 +75,7 @@ const refunding = ref(false)
 const refundReason = ref('')
 
 const isVip = computed(() => loginUserStore.loginUser.userRole === 'vip')
+const isAdmin = computed(() => loginUserStore.loginUser.userRole === 'admin')
 
 // Stripe 回调后 webhook 入账可能有延迟：轮询刷新登录态（3 次 × 2s）
 const refreshLoginUser = async () => {
@@ -194,6 +204,11 @@ const handleRefund = async () => {
 
 .plan-features li {
   padding: 4px 0;
+}
+
+.admin-tip {
+  margin-top: 16px;
+  color: var(--color-text-secondary, #666);
 }
 
 .refund-section {
