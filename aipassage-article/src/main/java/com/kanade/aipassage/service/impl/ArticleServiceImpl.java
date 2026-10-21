@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static com.kanade.aipassage.constant.UserConstant.ADMIN_ROLE;
+import static com.kanade.aipassage.constant.UserConstant.VIP_ROLE;
 
 /**
  * 文章表 服务层实现。
@@ -343,7 +344,10 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>  imp
             return;
         }
 
-        // 普通用户限制
+        // VIP / 管理员不限制；普通用户限制 NANO_BANANA 与 SVG_DIAGRAM
+        if (VIP_ROLE.equals(loginUser.getUserRole()) || ADMIN_ROLE.equals(loginUser.getUserRole())) {
+            return;
+        }
         for (String method : enabledImageMethods) {
             if (ImageMethodEnum.NANO_BANANA.getValue().equals(method) ||
                     ImageMethodEnum.SVG_DIAGRAM.getValue().equals(method)) {

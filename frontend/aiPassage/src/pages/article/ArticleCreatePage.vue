@@ -84,7 +84,7 @@
                     <a-checkbox value="PEXELS">Pexels 图库</a-checkbox>
                     <a-checkbox value="MERMAID">Mermaid 流程图</a-checkbox>
                     <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
-                    <a-checkbox value="SVG_DIAGRAM">SVG 示意图</a-checkbox>
+                    <a-checkbox value="SVG_DIAGRAM" :disabled="!isVip" :title="isVip ? '' : '仅限 VIP 会员使用'">SVG 示意图</a-checkbox>
                   </a-checkbox-group>
                 </div>
 
@@ -807,6 +807,10 @@ const startCreate = async () => {
       style: selectedStyle.value || undefined,
       enabledImageMethods: selectedImageMethods.value.length > 0 ? selectedImageMethods.value : undefined
     })
+    if (res.data.code !== 0) {
+      // 透出后端业务错误（如"高级配图功能仅限 VIP 会员使用"），不再笼统报"未返回任务ID"
+      throw new Error(res.data.message || '创建任务失败')
+    }
     const newTaskId = res.data.data
     if (!newTaskId) {
       throw new Error('创建任务失败：未返回任务ID')
