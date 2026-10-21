@@ -276,6 +276,10 @@
             <span class="quota-badge admin">管理员</span>
             <span class="quota-text">无限次</span>
           </div>
+          <div v-else-if="isVip" class="quota-admin">
+            <span class="quota-badge vip">VIP</span>
+            <span class="quota-text">无限次</span>
+          </div>
           <div v-else class="quota-info">
             <div class="quota-display">
               <span class="quota-number" :class="{ 'low': quota <= 1, 'empty': quota === 0 }">{{ quota }}</span>
@@ -605,7 +609,8 @@ let totalChapters = 0 // 总章节数(从大纲中获取)
 // 配额相关计算属性
 const isAdmin = computed(() => loginUserStore.loginUser.userRole === USER_ROLE_ADMIN)
 const quota = computed(() => loginUserStore.loginUser.quota ?? 0)
-const hasQuota = computed(() => isAdmin.value || quota.value > 0)
+const hasQuota = computed(() => isAdmin.value || isVip.value || quota.value > 0)
+const isVip = computed(() => loginUserStore.loginUser.userRole === 'vip')
 
 // 智能体步骤（对应后端阶段3图：正文 -> 审核 -> 配图分析 -> 配图生成 -> 合成）
 const agentSteps = [
@@ -1769,6 +1774,11 @@ onBeforeUnmount(() => {
   &.admin {
     background: linear-gradient(135deg, #ffd700 0%, #ffb800 100%);
     color: #7c5c00;
+  }
+
+  &.vip {
+    background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+    color: #fff;
   }
 }
 
