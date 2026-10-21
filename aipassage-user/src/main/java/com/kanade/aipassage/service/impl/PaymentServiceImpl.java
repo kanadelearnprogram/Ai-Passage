@@ -1,5 +1,6 @@
 package com.kanade.aipassage.service.impl;
 
+import cn.dev33.satoken.session.SaSession;
 import cn.dev33.satoken.stp.StpUtil;
 import com.kanade.aipassage.config.PaymentConfig;
 import com.kanade.aipassage.constant.UserConstant;
@@ -123,6 +124,10 @@ public class PaymentServiceImpl implements PaymentService {
         userMapper.update(user);
         log.info("[支付] 用户已升级为 VIP, userId={}, vipTime={}", userId, user.getVipTime());
 
+        // 会话角色只在登录时写入，支付升级后必须同步，否则 @SaCheckRole / LoginUserHolder
+        // 读到的仍是旧角色（用户需重新登录才生效）
+        syncSessionRole(Long.valueOf(userId), UserConstant.VIP_ROLE);
+
     }
 
     @Override
@@ -190,11 +195,22 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("[退款] 用户已降级, userId={}, role={}, quota={}",
                 userId, UserConstant.DEFAULT_ROLE, UserConstant.DEFAULT_QUOTA);
 
+        syncSessionRole(userId, UserConstant.DEFAULT_ROLE);
+
         log.info("退款成功，已取消 VIP 身份, userId={}, refundId={}", userId, updateRecord.getId());
         return true;
     }
 
     // todo 退款
+
+    /** 角色变更后同步 Sa-Token 账号会话中的角色（用户未登录时会话不存在，跳过） */
+    private void syncSessionRole(Long userId, String role) {
+        SaSession session = StpUtil.getSessionByLoginId(userId, false);
+        if (session != null) {
+            session.set(UserConstant.ROLE_SESSION_KEY, role);
+            log.info("[支付] 会话角色已同步, userId={}, role={}", userId, role);
+        }
+    }
 
     private Session createStripeSession(Long id, ProductTypeEnum productType) throws StripeException {
         long amountInCents = productType.getPrice().multiply(new BigDecimal(CENTS_MULTIPLIER)).longValue();

@@ -1,10 +1,8 @@
 package com.kanade.aipassage.controller;
 
-import cn.dev33.satoken.annotation.SaCheckRole;
 import cn.dev33.satoken.stp.StpUtil;
 import com.kanade.aipassage.common.BaseResponse;
 import com.kanade.aipassage.common.ResultUtils;
-import com.kanade.aipassage.constant.UserConstant;
 import com.kanade.aipassage.exception.BusinessException;
 import com.kanade.aipassage.exception.ErrorCode;
 import com.kanade.aipassage.model.entity.User;
@@ -45,7 +43,8 @@ public class PaymentController {
 
     @PostMapping("/refund")
     @Operation(summary = "申请退款")
-    @SaCheckRole( UserConstant.VIP_ROLE)
+    // 不用 @SaCheckRole：会话角色在支付升级后可能滞后，且会误挡管理员；
+    // 会员身份由 handleRefund 按数据库实时角色校验
     public BaseResponse<Boolean> refund(
             @RequestParam(required = false) String reason) {
         User loginUser = userService.getLoginUser();
