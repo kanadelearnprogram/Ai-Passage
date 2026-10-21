@@ -73,7 +73,7 @@ public class ImageAnalyzerAgent implements NodeAction {
         if (streamHandler != null) {
             Map<String, Object> stepMessage = new HashMap<>();
             stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
-            stepMessage.put("step", 3);
+            stepMessage.put("step", 4);
             stepMessage.put("stepId", "image_analyze");
             stepMessage.put("label", "分析配图");
             streamHandler.accept(GsonUtils.toJson(stepMessage));
@@ -114,7 +114,7 @@ public class ImageAnalyzerAgent implements NodeAction {
         if (streamHandler != null) {
             Map<String, Object> stepMessage = new HashMap<>();
             stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
-            stepMessage.put("step", 3);
+            stepMessage.put("step", 4);
             stepMessage.put("stepId", "image_analyze");
             stepMessage.put("label", "分析配图");
             stepMessage.put("imageRequirements", validatedRequirements.size());

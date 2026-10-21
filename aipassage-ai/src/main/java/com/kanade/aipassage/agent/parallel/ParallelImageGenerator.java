@@ -65,7 +65,7 @@ public class ParallelImageGenerator implements NodeAction {
         if (streamHandler != null) {
             Map<String, Object> stepMessage = new HashMap<>();
             stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
-            stepMessage.put("step", 4);
+            stepMessage.put("step", 5);
             stepMessage.put("stepId", "image_generate");
             stepMessage.put("label", "生成配图");
             streamHandler.accept(GsonUtils.toJson(stepMessage));

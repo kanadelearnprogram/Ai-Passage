@@ -64,7 +64,7 @@ public class ContentMergerAgent implements NodeAction {
         if (streamHandler != null) {
             Map<String, Object> stepMessage = new HashMap<>();
             stepMessage.put("type", SseMessageTypeEnum.STEP_UPDATE.getValue());
-            stepMessage.put("step", 5);
+            stepMessage.put("step", 6);
             stepMessage.put("stepId", "merge");
             stepMessage.put("label", "图文合成");
             streamHandler.accept(GsonUtils.toJson(stepMessage));
