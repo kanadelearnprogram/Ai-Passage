@@ -84,6 +84,7 @@
                     <a-checkbox value="PEXELS">Pexels 图库</a-checkbox>
                     <a-checkbox value="MERMAID">Mermaid 流程图</a-checkbox>
                     <a-checkbox value="EMOJI_PACK">表情包</a-checkbox>
+                    <a-checkbox value="SVG_DIAGRAM">SVG 示意图</a-checkbox>
                   </a-checkbox-group>
                 </div>
 
