@@ -21,6 +21,8 @@ import GlobalFooter from '@/components/GlobalFooter.vue'
 <style scoped>
 .basic-layout {
   background: none;
+  /* sticky footer：内容少时 footer 也贴住视口底部 */
+  min-height: 100vh;
 }
 
 .main-content {
@@ -28,5 +30,7 @@ import GlobalFooter from '@/components/GlobalFooter.vue'
   padding: 0;
   background: none;
   margin: 0;
+  /* 撑满剩余高度，将 footer 推至底部 */
+  flex: 1;
 }
 </style>
