@@ -20,6 +20,7 @@ import java.util.function.Consumer;
 
 import static com.alibaba.cloud.ai.graph.StateGraph.END;
 import static com.alibaba.cloud.ai.graph.StateGraph.START;
+import static com.alibaba.cloud.ai.graph.action.AsyncEdgeAction.edge_async;
 import static com.alibaba.cloud.ai.graph.action.AsyncNodeAction.node_async;
 
 
@@ -47,6 +48,8 @@ public class ArticleAgentOrchestrator {
     private ContentMergerAgent contentMergerAgent;
     @Resource
     private ReviewerAgent reviewerAgent;
+    @Resource
+    private ContentRewriteAgent contentRewriteAgent;
 
     // region 状态键常量
 
@@ -64,6 +67,10 @@ public class ArticleAgentOrchestrator {
     private static final String KEY_IMAGES = "images";
     private static final String KEY_FULL_CONTENT = "fullContent";
     private static final String KEY_ENABLED_IMAGE_METHODS = "enabledImageMethods";
+    private static final String KEY_REVIEW_PASS = "reviewPass";
+    private static final String KEY_REVIEW_ROUND = "reviewRound";
+    private static final String KEY_REVIEW_ISSUES = "reviewIssues";
+    private static final String KEY_REVIEW_SCORE = "reviewScore";
 
     // endregion
 
@@ -182,7 +189,8 @@ public class ArticleAgentOrchestrator {
             inputs.put(KEY_ENABLED_IMAGE_METHODS, state.getEnabledImageMethods());
 
             StateGraph graph = buildPhase3Graph();
-            CompiledGraph compiledGraph = graph.compile();
+            CompiledGraph compiledGraph = graph.compile(
+                    CompileConfig.builder().recursionLimit(agentConfig.getMaxIterations()).build());
 
             Optional<OverAllState> result = compiledGraph.invoke(inputs);
 
@@ -274,8 +282,8 @@ public class ArticleAgentOrchestrator {
     }
 
     /**
-     * 构建阶段3图：正文+配图生成（顺序执行）
-     * 流程：正文生成 -> 配图需求分析 -> 并行配图生成 -> 图文合成
+     * 构建阶段3图：正文+配图生成
+     * 流程：正文生成 -> 内容审核（可跳过）-> [不合格重写再审] -> 配图需求分析 -> 并行配图生成 -> 图文合成
      */
     private StateGraph buildPhase3Graph() throws GraphStateException {
         KeyStrategyFactory keyStrategyFactory = createKeyStrategyFactory();
@@ -284,17 +292,47 @@ public class ArticleAgentOrchestrator {
                 // 节点定义
                 .addNode("content_generator", node_async(contentGeneratorAgent))
                 .addNode("image_analyzer", node_async(imageAnalyzerAgent))
-                .addNode("reviewer",node_async(reviewerAgent))
+                .addNode("reviewer", node_async(reviewerAgent))
+                .addNode("content_rewrite", node_async(contentRewriteAgent))
                 .addNode("parallel_image_generator", node_async(parallelImageGenerator))
                 .addNode("content_merger", node_async(contentMergerAgent))
-                // 边定义：顺序执行
+                // 边定义：正文 -> 审核（开关关闭时跳过审核）-> 配图链路
                 .addEdge(START, "content_generator")
-                //.addEdge("content_generator", "image_analyzer")//todo reviewer
-                .addEdge("content_generator", "reviewer")
-                .addEdge("reviewer", "image_analyzer")
+                .addConditionalEdges("content_generator",
+                        edge_async(state -> agentConfig.isReviewEnabled() ? "review" : "skip"),
+                        Map.of("review", "reviewer", "skip", "image_analyzer"))
+                // 质量门禁：不合格重写后再审，超轮次强制放行（绝不自环到死）
+                .addConditionalEdges("reviewer",
+                        edge_async(state -> routeAfterReview(state)),
+                        Map.of(
+                                "pass", "image_analyzer",
+                                "retry", "content_rewrite",
+                                "giveup", "image_analyzer"))
+                .addEdge("content_rewrite", "reviewer")
                 .addEdge("image_analyzer", "parallel_image_generator")
                 .addEdge("parallel_image_generator", "content_merger")
                 .addEdge("content_merger", END);
+    }
+
+    /**
+     * 审核后路由（质量门禁）
+     * pass=合格放行；retry=重写后再审；giveup=超轮次强制放行
+     */
+    private String routeAfterReview(OverAllState state) {
+        boolean pass = state.value(KEY_REVIEW_PASS)
+                .map(v -> Boolean.parseBoolean(v.toString()))
+                .orElse(true);
+        int round = state.value(KEY_REVIEW_ROUND)
+                .map(v -> Integer.parseInt(v.toString()))
+                .orElse(0);
+        if (!agentConfig.isReviewRetryEnabled()) {
+            return "pass";
+        }
+        if (round >= agentConfig.getReviewMaxRound()) {
+            log.warn("审核轮次已达上限，强制放行, round={}", round);
+            return "giveup";
+        }
+        return pass ? "pass" : "retry";
     }
 
     /**
@@ -318,6 +356,10 @@ public class ArticleAgentOrchestrator {
             strategies.put(KEY_IMAGES, new ReplaceStrategy());
             strategies.put(KEY_FULL_CONTENT, new ReplaceStrategy());
             strategies.put(KEY_ENABLED_IMAGE_METHODS, new ReplaceStrategy());
+            strategies.put(KEY_REVIEW_PASS, new ReplaceStrategy());
+            strategies.put(KEY_REVIEW_ROUND, new ReplaceStrategy());
+            strategies.put(KEY_REVIEW_ISSUES, new ReplaceStrategy());
+            strategies.put(KEY_REVIEW_SCORE, new ReplaceStrategy());
             return strategies;
         };
     }
