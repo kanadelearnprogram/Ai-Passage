@@ -209,6 +209,26 @@
               </div>
             </div>
 
+            <!-- 内容审核报告 -->
+            <div v-if="currentStep >= 3 && !isCompleted && (reviewLoading || reviewReport)" class="review-panel">
+              <div class="review-panel-header">
+                <AuditOutlined class="review-icon" />
+                <span class="review-title">AI 内容审校</span>
+                <a-tag v-if="reviewLoading" color="processing">第 {{ reviewRound || 1 }} 轮审校中…</a-tag>
+                <a-tag v-else-if="reviewReport?.pass" color="success">合格（第 {{ reviewRound }} 轮）</a-tag>
+                <a-tag v-else color="warning">未通过，AI 正在重写优化（第 {{ reviewRound }} 轮）</a-tag>
+              </div>
+              <div v-if="reviewReport" class="review-report">
+                <div class="review-score" :class="reviewScoreClass">{{ reviewReport.score }}</div>
+                <ul class="review-issues">
+                  <li v-for="(issue, i) in reviewReport.issues" :key="i">
+                    <ExclamationCircleOutlined class="issue-icon" />
+                    <span>{{ issue }}</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
             <!-- 配图进度 -->
             <div v-if="imageCount > 0 && !isCompleted && currentStep >= 3" class="image-progress-box">
               <div class="progress-header">
@@ -438,25 +458,31 @@
             </div>
 
             <!-- 配图阶段提示 -->
-            <div v-if="currentStep >= 3 && currentStep <= 5 && currentPhase === 'CONTENT_GENERATING'" class="panel-section tips-section">
+            <div v-if="currentStep >= 3 && currentStep <= 6 && currentPhase === 'CONTENT_GENERATING'" class="panel-section tips-section">
               <h4 class="panel-title">
                 <StarOutlined />
                 提示
               </h4>
               <div class="tips-list">
                 <div v-if="currentStep === 3" class="tip-item">
-                  <div class="tip-icon">🎨</div>
+                  <div class="tip-icon">🔍</div>
                   <div class="tip-content">
-                    <div class="tip-desc">正文已生成，AI 正在分析最佳配图位置和风格</div>
+                    <div class="tip-desc">正文已生成，AI 审校编辑正在检查段落衔接与重复问题</div>
                   </div>
                 </div>
                 <div v-else-if="currentStep === 4" class="tip-item">
+                  <div class="tip-icon">🎨</div>
+                  <div class="tip-content">
+                    <div class="tip-desc">审核通过，AI 正在分析最佳配图位置和风格</div>
+                  </div>
+                </div>
+                <div v-else-if="currentStep === 5" class="tip-item">
                   <div class="tip-icon">🖼️</div>
                   <div class="tip-content">
                     <div class="tip-desc">AI 正在为您匹配高清无版权配图，请稍候...</div>
                   </div>
                 </div>
-                <div v-else-if="currentStep === 5" class="tip-item">
+                <div v-else-if="currentStep === 6" class="tip-item">
                   <div class="tip-icon">✨</div>
                   <div class="tip-content">
                     <div class="tip-desc">配图已完成，AI 正在将图片插入文章合适位置</div>
@@ -556,7 +582,9 @@ import {
   MessageOutlined,
   PictureOutlined,
   WarningOutlined,
-  CrownOutlined
+  CrownOutlined,
+  AuditOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons-vue'
 import { createArticle, confirmTitle, confirmOutline } from '@/api/articleController'
 import { connectSSE, closeSSE, type SSEMessage } from '@/utils/sse'
@@ -579,15 +607,19 @@ const isAdmin = computed(() => loginUserStore.loginUser.userRole === USER_ROLE_A
 const quota = computed(() => loginUserStore.loginUser.quota ?? 0)
 const hasQuota = computed(() => isAdmin.value || quota.value > 0)
 
-// 智能体步骤（对应后端 6 个步骤）
+// 智能体步骤（对应后端阶段3图：正文 -> 审核 -> 配图分析 -> 配图生成 -> 合成）
 const agentSteps = [
-  { title: '生成标题', description: 'AI 分析选题，生成吸睛标题' },
-  { title: '规划大纲', description: '构建文章结构，理清脉络' },
-  { title: '撰写正文', description: '流式生成高质量文章内容' },
-  { title: '分析配图', description: '智能分析配图需求和位置' },
-  { title: '生成配图', description: '自动匹配高清无版权图片' },
-  { title: '图文合成', description: '将配图插入正文，完美呈现' },
+  { id: 'title', title: '生成标题', description: 'AI 分析选题，生成吸睛标题' },
+  { id: 'outline', title: '规划大纲', description: '构建文章结构，理清脉络' },
+  { id: 'content', title: '撰写正文', description: '流式生成高质量文章内容' },
+  { id: 'review', title: '内容审核', description: 'AI 审校正文质量并给出报告' },
+  { id: 'image_analyze', title: '分析配图', description: '智能分析配图需求和位置' },
+  { id: 'image_generate', title: '生成配图', description: '自动匹配高清无版权图片' },
+  { id: 'merge', title: '图文合成', description: '将配图插入正文，完美呈现' },
 ]
+
+// 按 id 定位步骤索引（STEP_UPDATE 优先用 stepId，数字仅作协议回退）
+const stepIndexOf = (id: string) => agentSteps.findIndex(s => s.id === id)
 
 // 示例选题
 const exampleTopics = [
@@ -613,9 +645,23 @@ const isOutlineStreaming = ref(false)
 const currentStep = ref(0)
 
 // 步骤只前进不后退：STEP_UPDATE 补推/重连不会把步骤条打回去
-const advanceStep = (step: number) => {
-  currentStep.value = Math.max(currentStep.value, step)
+const advanceStep = (stepId: string) => {
+  currentStep.value = Math.max(currentStep.value, stepIndexOf(stepId))
 }
+
+// 内容审核状态（REVIEW_START / REVIEW_ROUND 驱动）
+const reviewLoading = ref(false)
+const reviewRound = ref(0)
+const reviewReport = ref<{ pass: boolean; score: number; issues: string[] } | null>(null)
+const reviewDone = ref(false)
+
+// 分数徽章三档着色：>=85 绿 / 70-84 黄 / <70 红
+const reviewScoreClass = computed(() => {
+  const score = reviewReport.value?.score ?? 0
+  if (score >= 85) return 'score-green'
+  if (score >= 70) return 'score-yellow'
+  return 'score-red'
+})
 
 const taskId = ref('')
 const errorVisible = ref(false)
@@ -788,7 +834,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
     case 'AGENT1_COMPLETE':
       // 智能体1完成，进入标题生成阶段（显示加载）
       currentPhase.value = 'TITLE_GENERATING'
-      advanceStep(1)
+      advanceStep('outline')
       break
 
     case 'TITLES_GENERATED':
@@ -831,7 +877,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
 
     case 'AGENT2_COMPLETE':
       // 大纲完成（内部处理，已在 OUTLINE_GENERATED 中切换阶段）
-      advanceStep(2)
+      advanceStep('content')
       break
 
     case 'AGENT3_STREAMING':
@@ -885,25 +931,51 @@ const handleSSEMessage = (msg: SSEMessage) => {
 
     case 'STEP_UPDATE':
       // 节点实时埋点的步骤推进（幂等，补推/重连不会打回步骤）
-      if (typeof msg.step === 'number') {
-        advanceStep(msg.step)
+      if (typeof msg.stepId === 'string' && stepIndexOf(msg.stepId) >= 0) {
+        advanceStep(msg.stepId)
+      } else if (typeof msg.step === 'number') {
+        currentStep.value = Math.max(currentStep.value, msg.step)
       }
       // 配图分析节点结束时携带配图总数，先于 IMAGE_COMPLETE 修正进度分母
       if (typeof msg.imageRequirements === 'number' && msg.imageRequirements > 0) {
         totalImages.value = msg.imageRequirements
       }
+      // 审核结束进入配图分析：报告卡片定格
+      if (msg.stepId === 'image_analyze') {
+        reviewLoading.value = false
+        reviewDone.value = true
+      }
+      break
+
+    case 'REVIEW_START':
+      // 审核开始：进入审核步骤，展示"审校中"
+      advanceStep('review')
+      reviewLoading.value = true
+      reviewDone.value = false
+      reviewRound.value = typeof msg.round === 'number' ? msg.round : reviewRound.value + 1
+      break
+
+    case 'REVIEW_ROUND':
+      // 每轮审核结论：报告卡片（分数徽章 + issues 列表），轮次变化时覆盖旧卡片
+      reviewLoading.value = false
+      reviewRound.value = typeof msg.round === 'number' ? msg.round : reviewRound.value
+      reviewReport.value = {
+        pass: !!msg.pass,
+        score: typeof msg.score === 'number' ? msg.score : 0,
+        issues: Array.isArray(msg.issues) ? msg.issues : [],
+      }
       break
 
     case 'AGENT3_COMPLETE':
-      // 正文完成，进入配图分析步骤
+      // 正文完成，进入内容审核步骤
       isStreaming.value = false
-      advanceStep(3)
+      advanceStep('review')
       // 注意：不改变 currentPhase，保持在 CONTENT_GENERATING 以继续显示正文内容
       break
 
     case 'AGENT4_COMPLETE':
       // 配图分析完成，进入配图生成步骤
-      advanceStep(4)
+      advanceStep('image_generate')
       totalImages.value = msg.imageRequirements?.length || totalImages.value
       break
 
@@ -917,7 +989,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
 
     case 'AGENT5_COMPLETE':
       // 所有配图完成，进入图文合成步骤
-      advanceStep(5)
+      advanceStep('merge')
       article.value.images = msg.images
       break
 
@@ -935,7 +1007,7 @@ const handleSSEMessage = (msg: SSEMessage) => {
       article.value.content = chapterContents.value.filter(c => c).join('\n\n')
 
       currentPhase.value = 'COMPLETED'
-      advanceStep(6)
+      currentStep.value = agentSteps.length
       isCompleted.value = true
       isStreaming.value = false
       message.success('文章创作完成!')
@@ -1076,6 +1148,10 @@ const resetCreate = () => {
   currentStep.value = 0
   imageCount.value = 0
   imageProgress.value = 0
+  reviewLoading.value = false
+  reviewRound.value = 0
+  reviewReport.value = null
+  reviewDone.value = false
   outlineRaw.value = ''
   confirmLoading.value = false
   
@@ -2103,6 +2179,82 @@ onBeforeUnmount(() => {
 .vip-link {
   margin-left: 8px;
   font-weight: 600;
+  color: #faad14;
+}
+
+.review-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--glass-bg);
+}
+
+.review-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.review-icon {
+  color: #6366f1;
+}
+
+.review-title {
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.review-report {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.review-score {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.score-green {
+  background: #52c41a;
+}
+
+.score-yellow {
+  background: #faad14;
+}
+
+.score-red {
+  background: #ff4d4f;
+}
+
+.review-issues {
+  flex: 1;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-issues li {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 3px 0;
+  color: var(--color-text-secondary, #666);
+  font-size: 13px;
+}
+
+.issue-icon {
+  margin-top: 4px;
   color: #faad14;
 }
 </style>
