@@ -1,0 +1,73 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: aipassage-gateway
+  profiles:
+    active: local
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+  cloud:
+    sentinel:
+      datasource:
+        gw-flow:
+          nacos:
+            server-addr: 127.0.0.1:8848
+            dataId: sentinel-gateway-flow-rules.json
+            rule-type: gw-flow
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      routes:
+        - id: user
+          uri: lb://aipassage-user
+          predicates:
+            - Path=/api/user/**
+        - id: article
+          uri: lb://aipassage-article
+          predicates:
+            - Path=/api/article/**,/api/statistics/**,/api/health/**
+        - id: payment
+          uri: lb://aipassage-user
+          predicates:
+            - Path=/api/payment/**
+        - id: stripe-webhook
+          uri: lb://aipassage-user
+          predicates:
+            - Path=/api/webhook/**
+
+# Sa-Token 配置（与各服务保持一致，共享同一个 Redis 校验令牌）
+sa-token:
+  token-name: satoken
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-read-cookie: true
+  is-read-header: true
+  token-style: uuid
+
+# 网关限流规则（Redisson 令牌桶；登录用户按令牌，匿名按 IP）
+gateway:
+  rate-limit:
+    default:
+      rate: 100
+      interval-seconds: 60
+    rules:
+      - pattern: /api/article/create
+        rate: 5
+        interval-seconds: 60
+      - pattern: /api/article/confirm-title
+        rate: 10
+        interval-seconds: 60
+      - pattern: /api/article/confirm-outline
+        rate: 10
+        interval-seconds: 60
+      - pattern: /api/article/progress/**
+        rate: 10
+        interval-seconds: 60
+
